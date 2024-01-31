@@ -6,7 +6,7 @@
     </div>
     <!-- query -->
     <div class="query-box">
-      <el-input class="query-input" v-model="queryInput" placeholder="请输入姓名进行搜索" />
+      <el-input class="query-input" v-model="queryInput" placeholder="请输入姓名进行搜索" @input="handleQueryName"/>
       <div class="btn-list">
         <el-button type="primary" @click="handleAdd">增加</el-button>
         <el-button type="danger" @click="handleDelList" v-if="multipleSelection.length>0">多选删除</el-button>
@@ -98,6 +98,7 @@ let tableData =ref([
     address: 'No. 189, Grove St, Los Angeles',
   },
 ])
+let tableDataCopy = Object.assign(tableData.value)
 let multipleSelection=ref([])
 let tableForm =ref({
   name:'梨花',
@@ -170,6 +171,17 @@ const handleEdit=(row)=>{
   dialogType.value = 'edit'
   tableForm.value = {...row}
 
+
+}
+//搜索
+const handleQueryName =(val)=>{
+  // console.log(queryInput.value)
+  // console.log(val);
+  if (val.length>0){
+    tableData.value=tableData.value.filter(item => (item.name).toLowerCase().match(val.toLowerCase()))
+  }else {
+    tableData.value=tableDataCopy
+  }
 
 }
 </script>
