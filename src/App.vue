@@ -178,7 +178,8 @@ const handleQueryName =(val)=>{
   // console.log(queryInput.value)
   // console.log(val);
   if (val.length>0){
-    tableData.value=tableData.value.filter(item => (item.name).toLowerCase().match(val.toLowerCase()))
+    //tableData.value=tableData.value.filter(item => (item.name).toLowerCase().match(val.toLowerCase()))//该方法不能实现实时更新
+    tableData.value=tableDataCopy.filter(item => (item.name).toLowerCase().match(val.toLowerCase()))
   }else {
     tableData.value=tableDataCopy
   }
