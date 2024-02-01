@@ -6,7 +6,7 @@
     </div>
     <!-- query -->
     <div class="query-box">
-      <el-input class="query-input" v-model="queryInput" placeholder="请输入姓名进行搜索" @input="handleQueryName"/>
+      <el-input class="query-input" v-model="queryInput" placeholder="请输入姓名进行搜索" @change="handleQueryName"/>
       <div class="btn-list">
         <el-button type="primary" @click="handleAdd">增加</el-button>
         <el-button type="danger" @click="handleDelList" v-if="multipleSelection.length>0">多选删除</el-button>
@@ -31,6 +31,14 @@
         </template>
       </el-table-column>
     </el-table>
+    <el-pagination
+        background
+        layout="prev, pager, next"
+        style="display: flex;justify-content: center;margin-top: 10px;"
+        :total="total"
+        v-model:current-page="curPage"
+        @current-change="handleChangePage"
+        /><!--分页-->
     <!--  dialog-->
     <el-dialog v-model="dialogFormVisible" :title="dialogType==='add'?'新增':'编辑'">
       <el-form :model="tableForm">
@@ -62,6 +70,7 @@
 <script setup>
 
 import {ref} from "vue";
+import request from "./utils/request.js";
 /*数据*/
 let queryInput = ref("")
 let tableData =ref([
@@ -109,17 +118,43 @@ let tableForm =ref({
 })
 let dialogFormVisible=ref(false)
 let dialogType=ref('add')
+let total =ref(10)
+let curPage =ref(1)
 /*方法*/
+//获取数据
+const getTableData =async (cur=1)=>{
+  //第一种请求方式更加直观（推荐）
+  let res=await request.get('/list',{
+    pageSize : 10,
+    pageNum :cur
+  })
+  console.log(res);
+  tableData.value=res.list
+  total.value=res.total
+  curPage.value=res.pageNum
+  //第二种请求方式比较杂乱（不推荐）
+  //let res=request.get(`user/list?PageNum=${cur}&PageSize=10`)
+}
+getTableData(1)//启用方法
+
+/*请求分页*/
+const handleChangePage=(val)=>{
+  getTableData(curPage.value)
+}
+
+
+
+
+
+
 /*const handleRowClick =()=>{
   console.log('click')
 }*/
 //选中
 const handleSelectionChange = (val) => {
-  // multipleSelection.value = val
-  // console.log(val);
   multipleSelection.value=[]//清空数据
   val.forEach(item=>{
-    multipleSelection.value.push(item.id)
+    multipleSelection.value.push(item.ID)
   })
   console.log(multipleSelection.value)
 }
@@ -131,37 +166,34 @@ const handleAdd=()=>{
   dialogType.value = 'add'
 }
 //确认
-const dialogConfirm=()=>{
+const dialogConfirm=async ()=>{
   dialogFormVisible.value=false
   //判断是编辑还是新增
   if (dialogType.value === 'add'){
-    //1.拿到数据
-    //2.添加到table
-    tableData.value.push({
-      id:(tableData.value.length+1).toString(),
+    //添加数据
+    await request.post('/add',{
       ...tableForm.value
     })
+    //刷新数据
+    await getTableData(curPage.value)
   }else {
-    //1.获取到当前的这条的索引
-    let index =tableData.value.findIndex(item => item.id === tableForm.value.id)
-    tableData.value[index]=tableForm.value
-    //2.替换当前索引值对应的数据
+    //修改数据
+    await request.put(`/update/${tableForm.value.ID}`,{
+      ...tableForm.value
+    })
+    //刷新数据
+    await getTableData(curPage.value)
   }
-
 }
-//删除一条
-const handleRowDel=({id})=>{
-  console.log(id)
-  //1.通过id获取条目对应的索引值
-  let index=tableData.value.findIndex(item=>item.id===id)
-  console.log(index);
-  //2.通过索引值删除对应条目
-  tableData.value.splice(index,1);
+//删除一条(这里的id不能小写拿不到数据后台控制器上的id为大写，这里request方法有点问题，需要改进，具体问题为http请求的问题‘delect’)
+const handleRowDel=async ({ID})=>{
+  await request.delete(`/delete/${ID}`)
+  await getTableData(curPage.value)
 }
 //选中删除
 const handleDelList=()=>{
-  multipleSelection.value.forEach(id=>{
-    handleRowDel({id})
+  multipleSelection.value.forEach(ID=>{
+    handleRowDel({ID})
   })
   multipleSelection.value=[]
 }
@@ -174,16 +206,12 @@ const handleEdit=(row)=>{
 
 }
 //搜索
-const handleQueryName =(val)=>{
-  // console.log(queryInput.value)
-  // console.log(val);
-  if (val.length>0){
-    //tableData.value=tableData.value.filter(item => (item.name).toLowerCase().match(val.toLowerCase()))//该方法不能实现实时更新
-    tableData.value=tableDataCopy.filter(item => (item.name).toLowerCase().match(val.toLowerCase()))
+const handleQueryName =async (val)=>{
+  if (val.length>0) {
+   tableData.value= await request.get(`/list/${val}`)
   }else {
-    tableData.value=tableDataCopy
+    await getTableData(curPage)
   }
-
 }
 </script>
 
